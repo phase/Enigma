@@ -50,12 +50,16 @@ public class MappingsReader {
 
         Gson gson = new GsonBuilder().setPrettyPrinting().create();
         JsonClass jsonClass = gson.fromJson(builder, JsonClass.class);
-        load(jsonClass, mappings);
+        load(null, jsonClass, mappings);
     }
 
-    public void load(JsonClass jsonClass, Mappings mappings) {
+    public void load(ClassMapping parent, JsonClass jsonClass, Mappings mappings) {
         ClassMapping classMapping = readClass(jsonClass.getObf(), jsonClass.getName());
-        mappings.addClassMapping(classMapping);
+        if (parent != null) {
+            parent.addInnerClassMapping(classMapping);
+        } else {
+            mappings.addClassMapping(classMapping);
+        }
         jsonClass.getField().forEach(jsonField -> classMapping.addFieldMapping(readField(jsonField.getObf(), jsonField.getName(), jsonField.getType())));
 
         jsonClass.getMethod().forEach(jsonMethod -> {
@@ -64,7 +68,9 @@ public class MappingsReader {
             classMapping.addMethodMapping(methodMapping);
         });
 
-        jsonClass.getInnerClass().forEach(jsonInnerClasses -> load(jsonInnerClasses, mappings));
+        jsonClass.getInnerClass().forEach(jsonInnerClasses -> {
+            load(classMapping, jsonInnerClasses, mappings);
+        });
     }
 
     private ArgumentMapping readArgument(int index, String name) {
